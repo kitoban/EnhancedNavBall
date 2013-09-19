@@ -11,11 +11,11 @@ namespace EnhancedNavBall
 
     static class Utilities
     {
-        static LogLevel loggingLevel = LogLevel.Diagnostic;
+        static LogLevel loggingLevel = LogLevel.None;
 
         public static void DebugLog(LogLevel logLevel, string log)
         {
-            if (logLevel >= loggingLevel)
+            if (logLevel <= loggingLevel)
             {
                 Debug.Log(log);
             }
