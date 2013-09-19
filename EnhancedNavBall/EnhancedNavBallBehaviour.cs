@@ -59,7 +59,14 @@ public class EnhancedNavBallBehaviour : MonoBehaviour
 
     private void TestVisibility(GameObject o)
     {
-        bool visable = o.transform.localPosition.z > 0.0d;
+        bool visable;
+            
+        if (FlightUIController.speedDisplayMode == FlightUIController.SpeedDisplayModes.Surface
+            || FlightUIController.speedDisplayMode == FlightUIController.SpeedDisplayModes.Target)
+            visable = false;
+        else
+            visable = o.transform.localPosition.z > 0.0d;
+
         o.SetActive(visable);
     }
 
@@ -76,13 +83,30 @@ public class EnhancedNavBallBehaviour : MonoBehaviour
 
         if (_navBallProgradeMagnatude == 0f)
             _navBallProgradeMagnatude = _navBallBehaviour.progradeVector.localPosition.magnitude;
+        
+        Quaternion gymbal = _navBallBehaviour.attitudeGymbal;
+
+        //switch (FlightUIController.speedDisplayMode)
+        //{
+        //    case FlightUIController.SpeedDisplayModes.Surface:
+        //    case FlightUIController.SpeedDisplayModes.Orbit:
+        //        gymbal = _navBallBehaviour.attitudeGymbal;
+        //        break;
+
+        //    case FlightUIController.SpeedDisplayModes.Target:
+        //        gymbal = _navBallBehaviour.relativeGymbal;
+        //        break;
+
+        //    default:
+        //        throw new ArgumentOutOfRangeException();
+        //}
 
         // Apply to nav ball
-        _radialPlus.transform.localPosition = _navBallBehaviour.attitudeGymbal * radialPlus * _navBallProgradeMagnatude;
-        _normalPlus.transform.localPosition = _navBallBehaviour.attitudeGymbal * normalPlus * _navBallProgradeMagnatude;
+        _radialPlus.transform.localPosition = gymbal * radialPlus * _navBallProgradeMagnatude;
+        _normalPlus.transform.localPosition = gymbal * normalPlus * _navBallProgradeMagnatude;
 
-        _radialMinus.transform.localPosition = _navBallBehaviour.attitudeGymbal * -radialPlus * _navBallProgradeMagnatude;
-        _normalMinus.transform.localPosition = _navBallBehaviour.attitudeGymbal * -normalPlus * _navBallProgradeMagnatude;
+        _radialMinus.transform.localPosition = gymbal * -radialPlus * _navBallProgradeMagnatude;
+        _normalMinus.transform.localPosition = gymbal * -normalPlus * _navBallProgradeMagnatude;
 
 
         Utilities.DebugLog(LogLevel.Diagnostic,
@@ -96,7 +120,7 @@ public class EnhancedNavBallBehaviour : MonoBehaviour
 
         Utilities.DebugLog(LogLevel.Diagnostic,
             string.Format("NavBall Calc: {0}\n{1}\n{2}\n{3}\n{4}\n{5}",
-                BuildOutput(_navBallBehaviour.attitudeGymbal, "attitudeGymbal"),
+                BuildOutput(gymbal, "attitudeGymbal"),
                 BuildOutput(_navBallProgradeMagnatude, "_navBallProgradeMagnatude"),
                 BuildOutput(_radialPlus.transform.localPosition, "_radialPlus"),
                 BuildOutput(_normalPlus.transform.localPosition, "_normalPlus"),
