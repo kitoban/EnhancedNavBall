@@ -28,15 +28,6 @@ public class EnhancedNavBallBehaviour : MonoBehaviour
     public void Start() 
     {
         NavBallGameObject = GameObject.Find("NavBall");
-    }
-
-    public void LateUpdate()
-    {
-        if (FlightGlobals.ready == false)
-            return;
-
-        if (NavBallGameObject == null)
-            return;
         
         if (_vectorsPivot == null)
         {
@@ -52,6 +43,19 @@ public class EnhancedNavBallBehaviour : MonoBehaviour
         }
 
         BuildEnhancedNavBall();
+        //CreateManueverPlane();
+    }
+
+    private void CreateManueverPlane()
+    {
+        throw new NotImplementedException();
+    }
+
+    public void LateUpdate()
+    {
+        if (FlightGlobals.ready == false)
+            return;
+
         PerformCalculations();
         HideBehindVectors();
     }
@@ -114,8 +118,7 @@ public class EnhancedNavBallBehaviour : MonoBehaviour
 
         _radialMinus.transform.localPosition = gymbal * -radialPlus * _navBallProgradeMagnatude;
         _normalMinus.transform.localPosition = gymbal * -normalPlus * _navBallProgradeMagnatude;
-
-
+        
         Utilities.DebugLog(LogLevel.Diagnostic,
             string.Format("MechJeb Calc: {0}\n{1}\n{2}\n{3}\n{4}\n{5}",
                 BuildOutput(CoM, "CoM"),

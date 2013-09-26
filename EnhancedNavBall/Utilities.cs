@@ -49,10 +49,10 @@ namespace EnhancedNavBall
                 3, 4, 5
             };
 
-            Vector2 uv1 = new Vector2(0, uvize);
-            Vector2 uv2 = new Vector2(uvize, 0);
-            Vector2 uv3 = new Vector2(0, 0);
-            Vector2 uv4 = new Vector2(uvize, uvize);
+            Vector2 uv1 = new Vector2(0, 0);
+            Vector2 uv2 = new Vector2(uvize, uvize);
+            Vector2 uv3 = new Vector2(0, uvize);
+            Vector2 uv4 = new Vector2(uvize, 0);
 
             mesh.uv = new[]{
                 uv1, uv4, uv3,
