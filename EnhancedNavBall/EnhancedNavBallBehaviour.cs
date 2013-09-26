@@ -2,6 +2,7 @@
 using System;
 using UnityEngine;
 
+[KSPAddon(KSPAddon.Startup.Flight, false)]
 public class EnhancedNavBallBehaviour : MonoBehaviour
 {
     public GameObject NavBallGameObject { get; set; }
@@ -22,6 +23,12 @@ public class EnhancedNavBallBehaviour : MonoBehaviour
     private Vector3 _normalMinusNavPosition;
 
     private const int navBallLayer = 12;
+
+    public void Awake() { }
+    public void Start() 
+    {
+        NavBallGameObject = GameObject.Find("NavBall");
+    }
 
     public void LateUpdate()
     {
@@ -175,10 +182,10 @@ public class EnhancedNavBallBehaviour : MonoBehaviour
 
         Utilities.DebugLog(LogLevel.Minimal, "BuildEnhancedNavBall");
 
-        _normalPlus = GameObject.CreatePrimitive(PrimitiveType.Plane);
-        _normalMinus = GameObject.CreatePrimitive(PrimitiveType.Plane);
-        _radialPlus = GameObject.CreatePrimitive(PrimitiveType.Plane);
-        _radialMinus = GameObject.CreatePrimitive(PrimitiveType.Plane);
+        _normalPlus = Utilities.CreateSimplePlane("normalPlus");
+        _normalMinus = Utilities.CreateSimplePlane("normalMinus");
+        _radialPlus = Utilities.CreateSimplePlane("radialPlus");
+        _radialMinus = Utilities.CreateSimplePlane("radialMinus");
 
         Color radialColour = new Color(0, 1, 0.958f);
         Color normalColour = new Color(0.930f, 0, 1);
@@ -211,12 +218,11 @@ public class EnhancedNavBallBehaviour : MonoBehaviour
     {
         LoadTexture();
         
-        planeObject.layer = navBallLayer;// NavBallInstance.layer;
+        planeObject.layer = navBallLayer;
         planeObject.transform.parent = _vectorsPivot;
         planeObject.transform.localPosition = Vector3.zero;
         planeObject.transform.position = Vector3.zero;
         planeObject.transform.localRotation = Quaternion.Euler(90f, 180f, 0);
-        planeObject.transform.localScale = planeObject.transform.localScale * 0.005f;
 
         planeObject.renderer.sharedMaterial = new Material(_maneuverGizmoTexture);
         planeObject.renderer.sharedMaterial.mainTextureScale = Vector2.one / 3;

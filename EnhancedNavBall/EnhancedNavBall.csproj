@@ -45,9 +45,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="BaseEnhancedNavBall.cs" />
     <Compile Include="EnhancedNavBallBehaviour.cs" />
-    <Compile Include="EnhancedNavBallModule.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Utilities.cs" />
   </ItemGroup>
