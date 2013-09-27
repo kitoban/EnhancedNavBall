@@ -11,7 +11,7 @@ namespace EnhancedNavBall
 
     static class Utilities
     {
-        static LogLevel loggingLevel = LogLevel.Minimal;
+        static LogLevel loggingLevel = LogLevel.None;
 
         public static void DebugLog(LogLevel logLevel, string log)
         {
@@ -21,7 +21,9 @@ namespace EnhancedNavBall
             }
         }
 
-        public static GameObject CreateSimplePlane(string name)
+        public static GameObject CreateSimplePlane(
+            string name,
+            float vectorSize)
         {
             Mesh mesh = new Mesh();
 
@@ -29,7 +31,6 @@ namespace EnhancedNavBall
             MeshFilter meshFilter = obj.AddComponent<MeshFilter>();
             obj.AddComponent<MeshRenderer>();
 
-            const float vectorSize = 0.025f;
             const float uvize = 1f;
 
             Vector3 p0 = new Vector3(-vectorSize, 0, vectorSize);
