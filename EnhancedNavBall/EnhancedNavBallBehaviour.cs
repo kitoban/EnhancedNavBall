@@ -20,9 +20,10 @@ public class EnhancedNavBallBehaviour : MonoBehaviour
     private GameObject _radialMinus;
     private GameObject _radialPlus;
     private GameObject _antiManeuverNode;
-    private GameObject _maneuverGhost;
-    
+    private GameObject _ghostManeuver;
+
     private static readonly Color _radialColour = new Color(0, 1, 0.958f);
+    private static readonly Color _maneuverColour = new Color(0, 0.1137f, 1, 0.5f);
     private static readonly Color _normalColour = new Color(0.930f, 0, 1);
 
     private CalculationStore _calculationStore;
@@ -66,7 +67,8 @@ public class EnhancedNavBallBehaviour : MonoBehaviour
     {
         GameObject simplePlane = Utilities.CreateSimplePlane("Test Plane", 0.5f);
 
-        SetupObjectPosition(simplePlane);
+        SetupObjectPosition(simplePlane,
+            _vectorsPivotTransform);
         simplePlane.transform.localPosition = new Vector3(0, 0.25f, 0);
 
         simplePlane.renderer.sharedMaterial = new Material(_maneuverGizmoTexture);
@@ -111,9 +113,15 @@ public class EnhancedNavBallBehaviour : MonoBehaviour
         _ghostPivotTransform.parent = _vectorsPivotTransform;
         _ghostPivotTransform.localPosition = new Vector3(0, 0, 0.01f);
 
-        _maneuverGhost = Utilities.CreateSimplePlane(
+        _ghostManeuver = Utilities.CreateSimplePlane(
             "maneuverGhost",
             _vectorSize);
+        
+        SetupObject(
+            _ghostManeuver,
+            new Vector2(_graphicOffset * 2, 0f),
+            _maneuverColour,
+            _ghostPivotTransform);
     }
 
     private void CreateManueverPlane()
@@ -125,7 +133,8 @@ public class EnhancedNavBallBehaviour : MonoBehaviour
         SetupObject(
             _antiManeuverNode,
             new Vector2(_graphicOffset, _graphicOffset * 2),
-            _radialColour);
+            _radialColour,
+            _vectorsPivotTransform);
     }
 
     private void BuildEnhancedNavBall()
@@ -154,30 +163,37 @@ public class EnhancedNavBallBehaviour : MonoBehaviour
         SetupObject(
             _normalPlus,
             new Vector2(0.0f, 0.0f),
-            _normalColour);
+            _normalColour,
+            _vectorsPivotTransform);
 
         SetupObject(
             _normalMinus,
             new Vector2(_graphicOffset, 0.0f),
-            _normalColour);
+            _normalColour,
+            _vectorsPivotTransform);
 
         SetupObject(
             _radialPlus,
             new Vector2(_graphicOffset, _graphicOffset),
-            _radialColour);
+            _radialColour,
+            _vectorsPivotTransform);
 
         SetupObject(
             _radialMinus,
             new Vector2(0.0f, _graphicOffset),
-            _radialColour);
+            _radialColour,
+            _vectorsPivotTransform);
     }
 
     private void SetupObject(
         GameObject planeObject,
         Vector2 textureOffset,
-        Color color)
+        Color color,
+        Transform parentTransform)
     {
-        SetupObjectPosition(planeObject);
+        SetupObjectPosition(
+            planeObject,
+            parentTransform);
 
         planeObject.renderer.sharedMaterial = new Material(_maneuverGizmoTexture);
         planeObject.renderer.sharedMaterial.mainTextureScale = _mainTextureScale;
@@ -185,10 +201,12 @@ public class EnhancedNavBallBehaviour : MonoBehaviour
         planeObject.renderer.sharedMaterial.color = color;
     }
 
-    private void SetupObjectPosition(GameObject planeObject)
+    private void SetupObjectPosition(
+        GameObject planeObject,
+        Transform parentTransform)
     {
         planeObject.layer = navBallLayer;
-        planeObject.transform.parent = _vectorsPivotTransform;
+        planeObject.transform.parent = parentTransform;
         planeObject.transform.localPosition = Vector3.zero;
         planeObject.transform.localRotation = Quaternion.Euler(90f, 180f, 0);
     }
@@ -207,15 +225,43 @@ public class EnhancedNavBallBehaviour : MonoBehaviour
         PerformCalculations(vessel);
         CalculateManeuver(vessel);
         HideBehindVectors();
+        UpdateGhostingVectors(vessel);
+    }
+
+    private void UpdateGhostingVectors(Vessel vessel)
+    {
+        if (vessel.patchedConicSolver.maneuverNodes.Count > 0)
+        {
+            _ghostManeuver.transform.localPosition = ProcessVectorForGhosting(_calculationStore.ManeuverPlus);
+            _ghostManeuver.SetActive(_calculationStore.ManeuverPlus.z <= 0.7d);
+        }
+        else
+        {
+            _ghostManeuver.SetActive(false);
+        }
+    }
+
+    private Vector3 ProcessVectorForGhosting(Vector3d vector)
+    {
+        Vector3 navballPoint = vector;
+        Vector3 ghostPoint = new Vector3(
+            navballPoint.x,
+            navballPoint.y,
+            0);
+
+        Quaternion ghostDirection = Quaternion.LookRotation(ghostPoint);
+
+        return ghostDirection * Vector3.forward * 0.08f;
     }
 
     private void CalculateManeuver(Vessel vessel)
     {
-        _calculationStore.RunManeuverCalculations(vessel);
+        Quaternion gymbal = _navBallBehaviour.attitudeGymbal;
+        _calculationStore.RunManeuverCalculations(vessel, gymbal);
 
         if (vessel.patchedConicSolver.maneuverNodes.Count > 0)
         {
-            _antiManeuverNode.transform.localPosition = _navBallBehaviour.attitudeGymbal * -_calculationStore.ManeuverPlus * _navBallProgradeMagnatude;
+            _antiManeuverNode.transform.localPosition = -_calculationStore.ManeuverPlus * _navBallProgradeMagnatude;
         }
         else
         {
@@ -250,12 +296,12 @@ public class EnhancedNavBallBehaviour : MonoBehaviour
 
     private void PerformCalculations(Vessel vessel)
     {
-        _calculationStore.RunOrbitCalculations(vessel);
+        Quaternion gymbal = _navBallBehaviour.attitudeGymbal;
+        _calculationStore.RunOrbitCalculations(vessel, gymbal);
         
         if (_navBallProgradeMagnatude == 0f)
             _navBallProgradeMagnatude = _navBallBehaviour.progradeVector.localPosition.magnitude;
         
-        Quaternion gymbal = _navBallBehaviour.attitudeGymbal;
 
         //switch (FlightUIController.speedDisplayMode)
         //{
@@ -273,11 +319,11 @@ public class EnhancedNavBallBehaviour : MonoBehaviour
         //}
 
         // Apply to nav ball
-        _radialPlus.transform.localPosition = gymbal * _calculationStore.RadialPlus * _navBallProgradeMagnatude;
-        _normalPlus.transform.localPosition = gymbal * _calculationStore.NormalPlus * _navBallProgradeMagnatude;
+        _radialPlus.transform.localPosition = _calculationStore.RadialPlus * _navBallProgradeMagnatude;
+        _normalPlus.transform.localPosition = _calculationStore.NormalPlus * _navBallProgradeMagnatude;
 
-        _radialMinus.transform.localPosition = gymbal * -_calculationStore.RadialPlus * _navBallProgradeMagnatude;
-        _normalMinus.transform.localPosition = gymbal * -_calculationStore.NormalPlus * _navBallProgradeMagnatude;
+        _radialMinus.transform.localPosition = -_calculationStore.RadialPlus * _navBallProgradeMagnatude;
+        _normalMinus.transform.localPosition = -_calculationStore.NormalPlus * _navBallProgradeMagnatude;
         
         //Utilities.DebugLog(LogLevel.Diagnostic,
         //    string.Format("MechJeb Calc: \n{0}\n{1}\n{2}\n{3}\n{4}\n{5}",
