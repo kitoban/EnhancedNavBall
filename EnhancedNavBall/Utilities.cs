@@ -70,5 +70,55 @@ namespace EnhancedNavBall
 
             return obj;
         }
+
+        public static string BuildOutput(
+            Quaternion quart,
+            string paramName)
+        {
+            return string.Format(
+                "{0} Euler - x:{1} y:{2} z:{3}",
+                paramName,
+                FloatFormat(quart.eulerAngles.x),
+                FloatFormat(quart.eulerAngles.y),
+                FloatFormat(quart.eulerAngles.z));
+        }
+
+        public static string BuildOutput(
+            float f,
+            string paramName)
+        {
+            return string.Format(
+                "{0} {1}",
+                paramName,
+                FloatFormat(f));
+        }
+
+        public static string BuildOutput(
+            Vector3 vector3,
+            string paramName)
+        {
+            return string.Format(
+                "{0} Vector - x:{1} y:{2} z:{3}",
+                paramName,
+                FloatFormat(vector3.x),
+                FloatFormat(vector3.y),
+                FloatFormat(vector3.z));
+        }
+
+        public static string BuildOutput(
+            Vector2 vector2,
+            string paramName)
+        {
+            return string.Format(
+                "{0} Vector - x:{1} y:{2}",
+                paramName,
+                FloatFormat(vector2.x),
+                FloatFormat(vector2.y));
+        }
+
+        public static string FloatFormat(float f)
+        {
+            return f.ToString("0.0000");
+        }
     }
 }
