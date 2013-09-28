@@ -31,14 +31,15 @@ public class EnhancedNavBallBehaviour : MonoBehaviour
 
     private CalculationStore _calculationStore;
 
+    private const int _navBallLayer = 12;
     private const float _manueverAlpha = 0.6f;
     private const float _ghostingAlpha = 0.8f;
     private const float _ghostingHideZ = 0.68f;
     private const float _ghostingHighestIntensity = 0.4f;
     private const float _graphicOffset = 1f / 3f;
-    private const int _navBallLayer = 12;
     private const float _vectorSize = 0.025f;
     private const float _ghostingPositionOffset = 0.08f;
+    private const float _scaleFactorGhostCloseActual = _ghostingHideZ - _ghostingHighestIntensity;
 
     #region Setup
 
@@ -266,6 +267,24 @@ public class EnhancedNavBallBehaviour : MonoBehaviour
             _ghostManeuver.transform.localPosition = ProcessVectorForGhosting(_calculationStore.ManeuverPlus);
             _ghostManeuver.SetActive(_calculationStore.ManeuverPlus.z <= _ghostingHideZ);
 
+            float alpha;
+
+            if (_calculationStore.ManeuverPlus.z < _ghostingHighestIntensity)
+            {
+                alpha = _manueverAlpha;
+            }
+            else
+            {
+                alpha = GetAlphaForCloseActual(
+                    _calculationStore.ManeuverPlus.z,
+                    _manueverAlpha);
+            }
+
+
+            UpdateGhostingAlpha(
+                _ghostManeuver,
+                alpha);
+
             _ghostPrograde.SetActive(false);
             _ghostRetrograde.SetActive(false);
         }
@@ -303,11 +322,17 @@ public class EnhancedNavBallBehaviour : MonoBehaviour
     {
         _ghostPrograde.transform.localPosition = ProcessVectorForGhosting(_calculationStore.ProgradeOrbit);
         _ghostPrograde.SetActive(_calculationStore.ProgradeOrbit.z <= _ghostingHideZ);
-        UpdateGhostingAlpha(_ghostPrograde, _calculationStore.ProgradeOrbit.z);
+        CalculateAndUpdateGhostingAlpha(
+            _ghostPrograde, 
+            _calculationStore.ProgradeOrbit.z,
+            _ghostingAlpha);
         
         _ghostRetrograde.transform.localPosition = ProcessVectorForGhosting(-_calculationStore.ProgradeOrbit);
         _ghostRetrograde.SetActive(-_calculationStore.ProgradeOrbit.z <= _ghostingHideZ);
-        UpdateGhostingAlpha(_ghostRetrograde, -_calculationStore.ProgradeOrbit.z);
+        CalculateAndUpdateGhostingAlpha(
+            _ghostRetrograde, 
+            -_calculationStore.ProgradeOrbit.z,
+            _ghostingAlpha);
     }
 
     private void UpdateGhostingSurface(bool landed)
@@ -316,46 +341,59 @@ public class EnhancedNavBallBehaviour : MonoBehaviour
         _ghostPrograde.SetActive(
             _calculationStore.ProgradeSurface.z <= _ghostingHideZ
             && landed == false);
-        UpdateGhostingAlpha(_ghostPrograde, _calculationStore.ProgradeSurface.z);
+        CalculateAndUpdateGhostingAlpha(
+            _ghostPrograde, 
+            _calculationStore.ProgradeSurface.z,
+            _ghostingAlpha);
 
         _ghostRetrograde.transform.localPosition = ProcessVectorForGhosting(-_calculationStore.ProgradeSurface);
         _ghostRetrograde.SetActive(
             -_calculationStore.ProgradeSurface.z <= _ghostingHideZ
             && landed == false);
-        UpdateGhostingAlpha(_ghostRetrograde, -_calculationStore.ProgradeSurface.z);
+        CalculateAndUpdateGhostingAlpha(
+            _ghostRetrograde, 
+            -_calculationStore.ProgradeSurface.z,
+            _ghostingAlpha);
     }
 
-    private void UpdateGhostingAlpha(
+    private void CalculateAndUpdateGhostingAlpha(
         GameObject ghostVector,
-        double inputZ)
+        double inputZ,
+        float ghostingAlpha)
     {
         float alpha;
         const float shiftFactor = 2.5f;
 
         if (inputZ < _ghostingHighestIntensity)
         {
-            alpha = 1 / ((shiftFactor + 1) * _ghostingHighestIntensity) * ((float)inputZ + (_ghostingHighestIntensity * shiftFactor)) * _ghostingAlpha;
+            alpha = 1 / ((shiftFactor + 1) * _ghostingHighestIntensity) * ((float)inputZ + (_ghostingHighestIntensity * shiftFactor)) * ghostingAlpha;
         }
         else
         {
-            double scalePoint = inputZ - _ghostingHighestIntensity;
-            const float scaleFactor = _ghostingHideZ - _ghostingHighestIntensity;
-
-            alpha = -(((1 / scaleFactor) * (float)scalePoint) - 1) * _ghostingAlpha;
-            
-            Utilities.DebugLog(LogLevel.Diagnostic,
-                string.Format(
-@"UpdateGhostingAlpha
-    scalePoint: {0}
-    scaleFactor: {1}
-    alpha: {2}",
-                    Utilities.FloatFormat((float)scalePoint),
-                    Utilities.FloatFormat(scaleFactor),
-                    Utilities.FloatFormat(alpha)));
-
+            alpha = GetAlphaForCloseActual(inputZ, ghostingAlpha);
         }
 
-        ghostVector.renderer.sharedMaterial.color = ApplyGhostingAlpha(ghostVector.renderer.sharedMaterial.color, alpha);
+        UpdateGhostingAlpha(
+            ghostVector,
+            alpha);
+    }
+
+    private static void UpdateGhostingAlpha(
+        GameObject ghostVector,
+        float alpha)
+    {
+        ghostVector.renderer.sharedMaterial.color = ApplyGhostingAlpha(
+            ghostVector.renderer.sharedMaterial.color,
+            alpha);
+    }
+
+    private static float GetAlphaForCloseActual(
+        double inputZ,
+        float ghostingAlpha)
+    {
+        double scalePoint = inputZ - _ghostingHighestIntensity;
+        float alpha = -(((1 / _scaleFactorGhostCloseActual) * (float)scalePoint) - 1) * ghostingAlpha;
+        return alpha;
     }
 
     private static Color ApplyGhostingAlpha(
