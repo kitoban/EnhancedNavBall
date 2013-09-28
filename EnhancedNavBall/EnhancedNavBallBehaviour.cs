@@ -21,16 +21,24 @@ public class EnhancedNavBallBehaviour : MonoBehaviour
     private GameObject _radialPlus;
     private GameObject _antiManeuverNode;
     private GameObject _ghostManeuver;
+    private GameObject _ghostPrograde;
+    private GameObject _ghostRetrograde;
 
     private static readonly Color _radialColour = new Color(0, 1, 0.958f);
-    private static readonly Color _maneuverColour = new Color(0, 0.1137f, 1, 0.5f);
+    private static readonly Color _maneuverColour = new Color(0, 0.1137f, 1, _manueverAlpha);
     private static readonly Color _normalColour = new Color(0.930f, 0, 1);
+    private static readonly Color _progradeColour = new Color(0.84f, 0.98f, 0); 
 
     private CalculationStore _calculationStore;
 
+    private const float _manueverAlpha = 0.6f;
+    private const float _ghostingAlpha = 0.8f;
+    private const float _ghostingHideZ = 0.68f;
+    private const float _ghostingHighestIntensity = 0.4f;
     private const float _graphicOffset = 1f / 3f;
-    private const int navBallLayer = 12;
+    private const int _navBallLayer = 12;
     private const float _vectorSize = 0.025f;
+    private const float _ghostingPositionOffset = 0.08f;
 
     #region Setup
 
@@ -114,13 +122,33 @@ public class EnhancedNavBallBehaviour : MonoBehaviour
         _ghostPivotTransform.localPosition = new Vector3(0, 0, 0.01f);
 
         _ghostManeuver = Utilities.CreateSimplePlane(
-            "maneuverGhost",
+            "ghostManeuver",
             _vectorSize);
         
         SetupObject(
             _ghostManeuver,
             new Vector2(_graphicOffset * 2, 0f),
             _maneuverColour,
+            _ghostPivotTransform);
+        
+        _ghostPrograde = Utilities.CreateSimplePlane(
+            "ghostPrograde",
+            _vectorSize);
+
+        SetupObject(
+            _ghostPrograde,
+            new Vector2(0f, _graphicOffset * 2),
+            _progradeColour,
+            _ghostPivotTransform);
+
+        _ghostRetrograde = Utilities.CreateSimplePlane(
+            "ghostRetrograde",
+            _vectorSize);
+
+        SetupObject(
+            _ghostRetrograde,
+            new Vector2(_graphicOffset, _graphicOffset * 2),
+            _progradeColour,
             _ghostPivotTransform);
     }
 
@@ -205,7 +233,7 @@ public class EnhancedNavBallBehaviour : MonoBehaviour
         GameObject planeObject,
         Transform parentTransform)
     {
-        planeObject.layer = navBallLayer;
+        planeObject.layer = _navBallLayer;
         planeObject.transform.parent = parentTransform;
         planeObject.transform.localPosition = Vector3.zero;
         planeObject.transform.localRotation = Quaternion.Euler(90f, 180f, 0);
@@ -222,23 +250,123 @@ public class EnhancedNavBallBehaviour : MonoBehaviour
 
         Vessel vessel = FlightGlobals.ActiveVessel;
 
-        PerformCalculations(vessel);
-        CalculateManeuver(vessel);
+        Quaternion gymbal = _navBallBehaviour.attitudeGymbal;
+        _calculationStore.RunCalculations(vessel, gymbal);
+
+        UpdateRadialNormalVectors();
+        CalculateManeuver();
         HideBehindVectors();
         UpdateGhostingVectors(vessel);
     }
 
     private void UpdateGhostingVectors(Vessel vessel)
     {
-        if (vessel.patchedConicSolver.maneuverNodes.Count > 0)
+        if (_calculationStore.ManeuverPresent)
         {
             _ghostManeuver.transform.localPosition = ProcessVectorForGhosting(_calculationStore.ManeuverPlus);
-            _ghostManeuver.SetActive(_calculationStore.ManeuverPlus.z <= 0.7d);
+            _ghostManeuver.SetActive(_calculationStore.ManeuverPlus.z <= _ghostingHideZ);
+
+            _ghostPrograde.SetActive(false);
+            _ghostRetrograde.SetActive(false);
         }
         else
         {
             _ghostManeuver.SetActive(false);
+
+            switch (FlightUIController.speedDisplayMode)
+            {
+                case FlightUIController.SpeedDisplayModes.Surface:
+                    UpdateGhostingSurface(vessel.Landed);
+                    break;
+
+                case FlightUIController.SpeedDisplayModes.Orbit:
+                    UpdateGhostingOrbit();
+                    break;
+
+                case FlightUIController.SpeedDisplayModes.Target:
+                    UpdateGhostingTarget();
+                    break;
+
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
         }
+    }
+
+    private void UpdateGhostingTarget()
+    {
+        _ghostPrograde.SetActive(false);
+        _ghostRetrograde.SetActive(false);
+    }
+
+    private void UpdateGhostingOrbit()
+    {
+        _ghostPrograde.transform.localPosition = ProcessVectorForGhosting(_calculationStore.ProgradeOrbit);
+        _ghostPrograde.SetActive(_calculationStore.ProgradeOrbit.z <= _ghostingHideZ);
+        UpdateGhostingAlpha(_ghostPrograde, _calculationStore.ProgradeOrbit.z);
+        
+        _ghostRetrograde.transform.localPosition = ProcessVectorForGhosting(-_calculationStore.ProgradeOrbit);
+        _ghostRetrograde.SetActive(-_calculationStore.ProgradeOrbit.z <= _ghostingHideZ);
+        UpdateGhostingAlpha(_ghostRetrograde, -_calculationStore.ProgradeOrbit.z);
+    }
+
+    private void UpdateGhostingSurface(bool landed)
+    {
+        _ghostPrograde.transform.localPosition = ProcessVectorForGhosting(_calculationStore.ProgradeSurface);
+        _ghostPrograde.SetActive(
+            _calculationStore.ProgradeSurface.z <= _ghostingHideZ
+            && landed == false);
+        UpdateGhostingAlpha(_ghostPrograde, _calculationStore.ProgradeSurface.z);
+
+        _ghostRetrograde.transform.localPosition = ProcessVectorForGhosting(-_calculationStore.ProgradeSurface);
+        _ghostRetrograde.SetActive(
+            -_calculationStore.ProgradeSurface.z <= _ghostingHideZ
+            && landed == false);
+        UpdateGhostingAlpha(_ghostRetrograde, -_calculationStore.ProgradeSurface.z);
+    }
+
+    private void UpdateGhostingAlpha(
+        GameObject ghostVector,
+        double inputZ)
+    {
+        float alpha;
+        const float shiftFactor = 2.5f;
+
+        if (inputZ < _ghostingHighestIntensity)
+        {
+            alpha = 1 / ((shiftFactor + 1) * _ghostingHighestIntensity) * ((float)inputZ + (_ghostingHighestIntensity * shiftFactor)) * _ghostingAlpha;
+        }
+        else
+        {
+            double scalePoint = inputZ - _ghostingHighestIntensity;
+            const float scaleFactor = _ghostingHideZ - _ghostingHighestIntensity;
+
+            alpha = -(((1 / scaleFactor) * (float)scalePoint) - 1) * _ghostingAlpha;
+            
+            Utilities.DebugLog(LogLevel.Diagnostic,
+                string.Format(
+@"UpdateGhostingAlpha
+    scalePoint: {0}
+    scaleFactor: {1}
+    alpha: {2}",
+                    Utilities.FloatFormat((float)scalePoint),
+                    Utilities.FloatFormat(scaleFactor),
+                    Utilities.FloatFormat(alpha)));
+
+        }
+
+        ghostVector.renderer.sharedMaterial.color = ApplyGhostingAlpha(ghostVector.renderer.sharedMaterial.color, alpha);
+    }
+
+    private static Color ApplyGhostingAlpha(
+        Color colour,
+        float ghostingAlpha)
+    {
+        return new Color(
+            colour.r,
+            colour.g,
+            colour.b,
+            ghostingAlpha);
     }
 
     private Vector3 ProcessVectorForGhosting(Vector3d vector)
@@ -251,21 +379,20 @@ public class EnhancedNavBallBehaviour : MonoBehaviour
 
         Quaternion ghostDirection = Quaternion.LookRotation(ghostPoint);
 
-        return ghostDirection * Vector3.forward * 0.08f;
+        return ghostDirection * Vector3.forward * _ghostingPositionOffset;
     }
 
-    private void CalculateManeuver(Vessel vessel)
+    private void CalculateManeuver()
     {
-        Quaternion gymbal = _navBallBehaviour.attitudeGymbal;
-        _calculationStore.RunManeuverCalculations(vessel, gymbal);
-
-        if (vessel.patchedConicSolver.maneuverNodes.Count > 0)
+        if (_calculationStore.ManeuverPresent)
         {
             _antiManeuverNode.transform.localPosition = -_calculationStore.ManeuverPlus * _navBallProgradeMagnatude;
+            _antiManeuverNode.SetActive(_antiManeuverNode.transform.localPosition.z > 0.0d);
         }
         else
         {
             _antiManeuverNode.transform.localPosition = _calculationStore.ManeuverPlus;
+            _antiManeuverNode.SetActive(false);
         }
     }
 
@@ -275,7 +402,6 @@ public class EnhancedNavBallBehaviour : MonoBehaviour
         TestVisibility(_radialMinus);
         TestVisibility(_normalPlus);
         TestVisibility(_normalMinus);
-        TestVisibility(_antiManeuverNode);
     }
 
     private void TestVisibility(GameObject o)
@@ -287,18 +413,21 @@ public class EnhancedNavBallBehaviour : MonoBehaviour
             
         if (FlightUIController.speedDisplayMode == FlightUIController.SpeedDisplayModes.Surface
             || FlightUIController.speedDisplayMode == FlightUIController.SpeedDisplayModes.Target)
+        {
             visable = false;
+        }
         else
-            visable = o.transform.localPosition.z > 0.0d;
+        {
+
+            visable = o.transform.localPosition.z > 0.0d 
+                && _calculationStore.ManeuverPresent == false;
+        }
 
         o.SetActive(visable);
     }
 
-    private void PerformCalculations(Vessel vessel)
+    private void UpdateRadialNormalVectors()
     {
-        Quaternion gymbal = _navBallBehaviour.attitudeGymbal;
-        _calculationStore.RunOrbitCalculations(vessel, gymbal);
-        
         if (_navBallProgradeMagnatude == 0f)
             _navBallProgradeMagnatude = _navBallBehaviour.progradeVector.localPosition.magnitude;
         
