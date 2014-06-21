@@ -51,18 +51,15 @@
     <Compile Include="CalculationStore.cs" />
     <Compile Include="Config\ConfigurationWindow.cs" />
     <Compile Include="DebugUtilities.cs" />
+    <Compile Include="References.cs" />
     <Compile Include="ScalingNavBall.cs" />
     <Compile Include="Constants.cs" />
     <Compile Include="EnhancedNavBall.cs" />
     <Compile Include="Config\NavballSettings.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SlidingNavball.cs" />
-    <Compile Include="SlidingNavballMonoBehaviour.cs" />
     <Compile Include="ToolbarWrapper.cs" />
     <Compile Include="Utilities.cs" />
-    <Compile Include="_QuickLoader.cs">
-      <SubType>Code</SubType>
-    </Compile>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>

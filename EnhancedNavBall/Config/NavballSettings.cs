@@ -45,7 +45,7 @@ namespace EnhancedNavBall.Config
 
         private static string GetDefaultNavballPosition()
         {
-            return SlidingNavBall.GetNavballPostion(ScreenSafeUI.fetch).ToString();
+            return SlidingNavBall.GetNavballPostion().ToString();
         }
 
         private static string GetDefaultNavballScale()

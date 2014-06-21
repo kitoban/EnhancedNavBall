@@ -6,42 +6,37 @@ namespace EnhancedNavBall.Config
 {
     class ConfigurationWindow
     {
-        public Texture2D _iconTexture; //= new Texture2D(32, 32, TextureFormat.ARGB32, false);
-        private static int _WindowAddID = 0;
-        static Rect _WindowAddRect;
-        private readonly Rect WindowPosByActiveScene = new Rect(3, 36, 300, 45);
-        System.Random rnd = new System.Random();
-        int intPaneWindowWidth = 380;
-        int intAddPaneWindowWidth = 320;
-        long AddWindowHeight = 200;
+        private Texture2D _iconTexture; //= new Texture2D(32, 32, TextureFormat.ARGB32, false);
+        private static int _windowId = 0;
+        private readonly Rect _windowPos = new Rect(3, 36, 300, 45);
+        private readonly System.Random _rnd = new System.Random();
+        private const int _windowWidth = 320;
+        private const long _windowHeight = 130;
         private bool _setupComplete;
         private readonly NavballSettings _settings;
         private Rect _screenRect;
-        private bool _windowVisibleByActiveScene;
         private bool? _toolbarManagerLoaded;
         private ToolbarButtonWrapper _toolbarButton;
 
-        private float _navballLeftLimit;// = 0.45f;
-        private float _navballRightLimit;// = ScreenSafeUI.fetch.rightAnchor.bottom.position.x - 0.1f;// 2.17f;
-        private ScreenSafeUI _screenSafeUi;
+        private readonly float _navballLeftLimit;
+        private readonly float _navballRightLimit;
 
         public ConfigurationWindow(
-            NavballSettings navballSettings,
-            ScreenSafeUI screenSafeUi)
+            NavballSettings navballSettings)
         {
-            _screenSafeUi = screenSafeUi;
-            var rightX = _screenSafeUi.rightAnchor.bottom.position.x;
-            var leftX = _screenSafeUi.leftAnchor.bottom.position.x;
+            var screenSafeUi = References.Instance.ScreenSafeUi;
+            var rightX = screenSafeUi.rightAnchor.bottom.position.x;
+            var leftX = screenSafeUi.leftAnchor.bottom.position.x;
             _navballRightLimit = rightX - (rightX / 5);
             _navballLeftLimit = leftX + (rightX / 6f);
 
             _settings = navballSettings;
 
             _screenRect = new Rect(
-                WindowPosByActiveScene.x + WindowPosByActiveScene.width,
-                WindowPosByActiveScene.y,
-                intAddPaneWindowWidth,
-                AddWindowHeight);
+                _windowPos.x + _windowPos.width,
+                _windowPos.y,
+                _windowWidth,
+                _windowHeight);
         }
 
         internal void BuildIcon()
@@ -124,7 +119,7 @@ namespace EnhancedNavBall.Config
             if (_settings.WindowVisibleByActiveScene)
             {
                 _screenRect = GUILayout.Window(
-                    _WindowAddID,
+                    _windowId,
                     _screenRect,
                     FillAddWindow,
                     "Enhanced Navball Settings",
@@ -137,7 +132,7 @@ namespace EnhancedNavBall.Config
             if (_setupComplete)
                 return;
 
-            _WindowAddID = rnd.Next(1000, 2000000);
+            _windowId = _rnd.Next(1000, 2000000);
             GUI.skin = HighLogic.Skin;
             if (BasicResources.styleWindow == null)
             {
@@ -207,7 +202,7 @@ namespace EnhancedNavBall.Config
                 GUILayout.ExpandWidth(true)))
             {
                 SlidingNavBall.UpdateNavballPostion(
-                    _screenSafeUi,
+                    References.Instance.ScreenSafeUi,
                     _settings.NavballPosition);
                 _settings.Save();
             }
@@ -217,7 +212,7 @@ namespace EnhancedNavBall.Config
                 BasicResources.StyleButton,
                 GUILayout.ExpandWidth(false)))
             {
-                _settings.NavballPosition = SlidingNavBall.ResetNavballPostion(_screenSafeUi);
+                _settings.NavballPosition = SlidingNavBall.ResetNavballPostion();
                 _settings.Save();
             }
 
@@ -313,140 +308,6 @@ namespace EnhancedNavBall.Config
                 return true;
             }
             return false;
-        }
-
-        public Boolean DrawTextBox(ref String strVar, GUIStyle style, params GUILayoutOption[] options)
-        {
-            String strReturn = GUILayout.TextField(strVar, style, options);
-            if (strReturn != strVar)
-            {
-                strVar = strReturn;
-                //DebugLogFormatted("String Changed:" + strVar.ToString());
-                return true;
-            }
-            return false;
-        }
-
-        /// <summary>
-        /// Draws a toggle button like a checkbox
-        /// </summary>
-        /// <param name="blnVar"></param>
-        /// <returns>True when check state has changed</returns>
-        public Boolean DrawCheckbox(ref Boolean blnVar, String strText, params GUILayoutOption[] options)
-        {
-            return DrawCheckbox(ref blnVar, new GUIContent(strText), 15, options);
-        }
-        public Boolean DrawCheckbox(ref Boolean blnVar, GUIContent content, params GUILayoutOption[] options)
-        {
-            return DrawCheckbox(ref blnVar, content, 15, options);
-        }
-        public Boolean DrawCheckbox(ref Boolean blnVar, String strText, int CheckboxSpace, params GUILayoutOption[] options)
-        {
-            return DrawCheckbox(ref blnVar, new GUIContent(strText), CheckboxSpace, options);
-        }
-        //CHANGED
-        /// <summary>
-        /// Draws a toggle button like a checkbox
-        /// </summary>
-        /// <param name="blnVar"></param>
-        /// <returns>True when check state has changed</returns>
-        public Boolean DrawCheckbox(ref Boolean blnVar, GUIContent content, int CheckboxSpace, params GUILayoutOption[] options)
-        {
-            // return DrawToggle(ref blnVar, strText, KACResources.styleCheckbox, options);
-            Boolean blnReturn = false;
-            Boolean blnToggleInitial = blnVar;
-
-            GUILayout.BeginHorizontal();
-            //DrawWindows the radio
-            DrawToggle(ref blnVar, "", BasicResources.styleCheckbox, options);
-            //Spacing
-            GUILayout.Space(CheckboxSpace);
-
-            //And the button like a label
-            if (GUILayout.Button(content, BasicResources.styleCheckboxLabel, options))
-            {
-                //if its clicked then toggle the boolean
-                blnVar = !blnVar;
-                //KACWorker.DebugLogFormatted("Toggle Changed:" + blnVar);
-            }
-
-            GUILayout.EndHorizontal();
-
-            //If output value doesnt = input value
-            if (blnToggleInitial != blnVar)
-            {
-                //KACWorker.DebugLogFormatted("Toggle recorded:" + blnVar);
-                blnReturn = true;
-            }
-            return blnReturn;
-        }
-
-        public Boolean DrawToggle(ref Boolean blnVar, String ButtonText, GUIStyle style, params GUILayoutOption[] options)
-        {
-            Boolean blnReturn = GUILayout.Toggle(blnVar, ButtonText, style, options);
-
-            return ToggleResult(ref blnVar, ref  blnReturn);
-        }
-
-        public Boolean DrawToggle(ref Boolean blnVar, Texture image, GUIStyle style, params GUILayoutOption[] options)
-        {
-            Boolean blnReturn = GUILayout.Toggle(blnVar, image, style, options);
-
-            return ToggleResult(ref blnVar, ref blnReturn);
-        }
-
-        public Boolean DrawToggle(ref Boolean blnVar, GUIContent content, GUIStyle style, params GUILayoutOption[] options)
-        {
-            Boolean blnReturn = GUILayout.Toggle(blnVar, content, style, options);
-
-            return ToggleResult(ref blnVar, ref blnReturn);
-        }
-
-        private Boolean ToggleResult(ref Boolean Old, ref Boolean New)
-        {
-            if (Old != New)
-            {
-                Old = New;
-                //DebugLogFormatted("Toggle Changed:" + New.ToString());
-                return true;
-            }
-            return false;
-        }
-
-        public Boolean DrawRadioList(ref int Selected, params String[] Choices)
-        {
-            return DrawRadioList(true, ref Selected, Choices);
-        }
-        public Boolean DrawRadioList(Boolean Horizontal, ref int Selected, params String[] Choices)
-        {
-            int InitialChoice = Selected;
-
-            if (Horizontal)
-                GUILayout.BeginHorizontal();
-            else
-                GUILayout.BeginVertical();
-
-            for (int intChoice = 0; intChoice < Choices.Length; intChoice++)
-            {
-                //checkbox
-                GUILayout.BeginHorizontal();
-                if (GUILayout.Toggle((intChoice == Selected), "", BasicResources.styleCheckbox))
-                    Selected = intChoice;
-                //button that looks like a label
-                if (GUILayout.Button(Choices[intChoice], BasicResources.styleCheckboxLabel))
-                    Selected = intChoice;
-                GUILayout.EndHorizontal();
-            }
-            if (Horizontal)
-                GUILayout.EndHorizontal();
-            else
-                GUILayout.EndVertical();
-
-            //if (InitialChoice != Selected)
-            //    DebugLogFormatted(String.Format("Radio List Changed:{0} to {1}", InitialChoice, Selected));
-
-
-            return !(InitialChoice == Selected);
         }
     }
 }

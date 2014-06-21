@@ -8,18 +8,12 @@ namespace EnhancedNavBall
     [KSPAddon(KSPAddon.Startup.Flight, false)]
     public class EnhancedNavBall : MonoBehaviour
     {
-        private GameObject NavBallGameObject { get; set; }
-
-        private NavBall _navBallBehaviour;
         private float _navBallProgradeMagnatude;
-        private Material _maneuverGizmoTexture;
-        private Material _navBallTexture;
-        private Transform _vectorsPivotTransform;
         private GameObject _ghostPivot;
         private Transform _ghostPivotTransform;
         private readonly Vector2 _mainTextureScale = Vector2.one / 3;
-        private bool IsInPostDrawQueue = false;
-        private bool ShouldBeInPostDrawQueue = false;
+        private bool _isInPostDrawQueue = false;
+        private bool _shouldBeInPostDrawQueue = false;
 
         private GameObject _normalPlus;
         private GameObject _normalMinus;
@@ -39,7 +33,6 @@ namespace EnhancedNavBall
         private ConfigurationWindow _configWindow;
         public List<GameScenes> DrawScenes = new List<GameScenes> { GameScenes.FLIGHT };
         private NavballSettings _navballSettings;
-        private GameObject _proWaypoint;
         public float GhostOffset = 0.0236692f;
 
         private const float _manueverAlpha = 0.6f;
@@ -59,9 +52,9 @@ namespace EnhancedNavBall
         {
             //Do the GUI Stuff - basically get the workers draw stuff into the postrendering queue
             //If the two flags are different are we going in or out of the queue
-            if (ShouldBeInPostDrawQueue != IsInPostDrawQueue)
+            if (_shouldBeInPostDrawQueue != _isInPostDrawQueue)
             {
-                if (ShouldBeInPostDrawQueue && !IsInPostDrawQueue)
+                if (_shouldBeInPostDrawQueue && !_isInPostDrawQueue)
                 {
                     Utilities.DebugLogFormatted(LogLevel.Diagnostic, "Adding DrawGUI to PostRender Queue");
 
@@ -70,7 +63,7 @@ namespace EnhancedNavBall
 
                     //Add to the queue
                     RenderingManager.AddToPostDrawQueue(5, DrawGUI);
-                    IsInPostDrawQueue = true;
+                    _isInPostDrawQueue = true;
 
                     //if we are adding the renderer and we are in flight then do the daily version check if required
                     //if (HighLogic.LoadedScene == GameScenes.FLIGHT && Settings.DailyVersionCheck)
@@ -81,7 +74,7 @@ namespace EnhancedNavBall
                 {
                     Utilities.DebugLogFormatted(LogLevel.Diagnostic, "Removing DrawGUI from PostRender Queue");
                     RenderingManager.RemoveFromPostDrawQueue(5, DrawGUI);
-                    IsInPostDrawQueue = false;
+                    _isInPostDrawQueue = false;
                 }
             }
         }
@@ -95,31 +88,17 @@ namespace EnhancedNavBall
 
         public void Awake()
         {
-            Utilities.DebugLogFormatted(LogLevel.Diagnostic, "Loading Config");
-            _proWaypoint = GameObject.Find("ProgradeWaypoint");
-
-            //GameObject find = GameObject.Find("MapCollapse_navball");
-            //if (find != null)
-            //    find.AddComponent<MapMonitor>();
         }
 
         private void LoadFromSettings()
         {
-
             Utilities.DebugLogFormatted(LogLevel.Diagnostic, "NavballPosition: {0}", _navballSettings.NavballPosition);
-            SlidingNavBall.UpdateNavballPostion(ScreenSafeUI.fetch, _navballSettings.NavballPosition);
+            SlidingNavBall.UpdateNavballPostion(
+                References.Instance.ScreenSafeUi,
+                _navballSettings.NavballPosition);
 
             Utilities.DebugLogFormatted(LogLevel.Diagnostic, "NavballScale: {0}", _navballSettings.NavballScale);
             ScalingNavBall.UpdateNavballScale(_navballSettings.NavballScale);
-
-
-            //Utilities.DebugLog(LogLevel.Minimal, "AddDraggable start");
-
-            //GameObject find = GameObject.Find("collapseExpandButton");
-            //if (find != null)
-            //{
-            //    SlidingNavballMonoBehaviour slidingNavballMonoBehaviour = find.AddComponent<SlidingNavballMonoBehaviour>();
-            //}
         }
 
 
@@ -130,104 +109,44 @@ namespace EnhancedNavBall
 
             _calculationStore = new CalculationStore();
 
-            NavBallGameObject = GameObject.Find("NavBall");
-
-            if (_vectorsPivotTransform == null)
-            {
-                _vectorsPivotTransform = NavBallGameObject.transform.FindChild("vectorsPivot");
-            }
-
-            if (_vectorsPivotTransform == null)
-                return;
-
-            if (_navBallBehaviour == null)
-            {
-                _navBallBehaviour = NavBallGameObject.GetComponent<NavBall>();
-            }
-
-            LoadTexture();
             BuildEnhancedNavBall();
             CreateManueverPlane();
             BuildGhostingLayer();
 
-            _configWindow = new ConfigurationWindow(_navballSettings,
-                ScreenSafeUI.fetch);
+            _configWindow = new ConfigurationWindow(_navballSettings);
             LoadFromSettings();
 
             _configWindow.BuildIcon();
 
-            //LoadNavTexture();
             //TestPlane();
         }
 
         internal void OnDestroy()
         {
             _configWindow.DestroyToolbarButton();
+            References.Destroy();
         }
 
         private void TestPlane()
         {
             GameObject simplePlane = Utilities.CreateSimplePlane("Test Plane", 0.5f);
 
-            SetupObjectPosition(simplePlane,
-                _vectorsPivotTransform);
+            SetupObjectPosition(
+                simplePlane,
+                References.Instance.VectorsPivotTransform);
             simplePlane.transform.localPosition = new Vector3(0, 0.25f, 0);
 
-            simplePlane.renderer.sharedMaterial = new Material(_navBallTexture);
+            simplePlane.renderer.sharedMaterial = new Material(References.Instance.ManeuverTexture);
             simplePlane.renderer.sharedMaterial.mainTextureScale = Vector2.one;
             simplePlane.renderer.sharedMaterial.mainTextureOffset = Vector2.zero;
             simplePlane.renderer.sharedMaterial.color = _radialColour;
-        }
-
-        private void LoadTexture()
-        {
-            if (_maneuverGizmoTexture == null)
-            {
-                if (MapView.ManeuverNodePrefab == null)
-                    throw new ArgumentNullException("MapView.ManeuverNodePrefab");
-
-                ManeuverGizmo maneuverGizmo = MapView.ManeuverNodePrefab.GetComponent<ManeuverGizmo>();
-                if (maneuverGizmo == null)
-                    throw new ArgumentNullException("maneuverGizmo");
-
-                ManeuverGizmoHandle maneuverGizmoHandle = maneuverGizmo.handleNormal;
-
-                if (maneuverGizmoHandle == null)
-                    throw new ArgumentNullException("maneuverGizmoHandle");
-
-                Transform transform = maneuverGizmoHandle.flag;
-
-                if (transform == null)
-                    throw new ArgumentNullException("transform");
-
-                Renderer renderer1 = transform.renderer;
-                if (renderer1 == null)
-                    throw new ArgumentNullException("renderer1");
-
-                _maneuverGizmoTexture = renderer1.sharedMaterial;
-            }
-        }
-
-        private void LoadNavTexture()
-        {
-            if (_navBallTexture == null)
-            {
-                if (_navBallBehaviour == null)
-                    throw new ArgumentNullException("_navBallBehaviour");
-
-                Renderer renderer1 = _navBallBehaviour.navBall.renderer;
-                if (renderer1 == null)
-                    throw new ArgumentNullException("renderer1");
-
-                _navBallTexture = renderer1.sharedMaterial;
-            }
         }
 
         private void BuildGhostingLayer()
         {
             _ghostPivot = new GameObject("ghostPivot");
             _ghostPivotTransform = _ghostPivot.transform;
-            _ghostPivotTransform.parent = _vectorsPivotTransform;
+            _ghostPivotTransform.parent = References.Instance.VectorsPivotTransform;
             _ghostPivotTransform.localPosition = new Vector3(0, 0, 0.01f);
 
             _ghostManeuver = Utilities.CreateSimplePlane(
@@ -271,7 +190,7 @@ namespace EnhancedNavBall
                 _antiManeuverNode,
                 new Vector2(_graphicOffset, _graphicOffset * 2),
                 _radialColour,
-                _vectorsPivotTransform);
+                References.Instance.VectorsPivotTransform);
         }
 
         private void BuildEnhancedNavBall()
@@ -301,25 +220,25 @@ namespace EnhancedNavBall
                 _normalPlus,
                 new Vector2(0.0f, 0.0f),
                 _normalColour,
-                _vectorsPivotTransform);
+                References.Instance.VectorsPivotTransform);
 
             SetupObject(
                 _normalMinus,
                 new Vector2(_graphicOffset, 0.0f),
                 _normalColour,
-                _vectorsPivotTransform);
+                References.Instance.VectorsPivotTransform);
 
             SetupObject(
                 _radialPlus,
                 new Vector2(_graphicOffset, _graphicOffset),
                 _radialColour,
-                _vectorsPivotTransform);
+                References.Instance.VectorsPivotTransform);
 
             SetupObject(
                 _radialMinus,
                 new Vector2(0.0f, _graphicOffset),
                 _radialColour,
-                _vectorsPivotTransform);
+                References.Instance.VectorsPivotTransform);
         }
 
         private void SetupObject(
@@ -332,7 +251,7 @@ namespace EnhancedNavBall
                 planeObject,
                 parentTransform);
 
-            planeObject.renderer.sharedMaterial = new Material(_maneuverGizmoTexture);
+            planeObject.renderer.sharedMaterial = new Material(References.Instance.ManeuverTexture);
             planeObject.renderer.sharedMaterial.mainTextureScale = _mainTextureScale;
             planeObject.renderer.sharedMaterial.mainTextureOffset = textureOffset;
             planeObject.renderer.sharedMaterial.color = color;
@@ -355,17 +274,19 @@ namespace EnhancedNavBall
         {
 
             //Work out if we should be in the gui queue
-            ShouldBeInPostDrawQueue = DrawScenes.Contains(HighLogic.LoadedScene);
+            _shouldBeInPostDrawQueue = DrawScenes.Contains(HighLogic.LoadedScene);
         }
 
         public void LateUpdate()
         {
+            Utilities.DebugLog(LogLevel.Diagnostic, "LateUpdate called");
+
             if (FlightGlobals.ready == false)
                 return;
 
             Vessel vessel = FlightGlobals.ActiveVessel;
 
-            Quaternion gymbal = _navBallBehaviour.attitudeGymbal;
+            Quaternion gymbal = References.Instance.Navball.attitudeGymbal;
             _calculationStore.RunCalculations(vessel, gymbal);
 
             UpdateRadialNormalVectors();
@@ -432,6 +353,13 @@ namespace EnhancedNavBall
                         throw new ArgumentOutOfRangeException();
                 }
             }
+
+            Utilities.DebugLog(LogLevel.Diagnostic, Utilities.BuildOutput(_ghostManeuver.transform.localPosition, "_ghostManeuver"));
+            Utilities.DebugLog(LogLevel.Diagnostic, Utilities.BuildOutput(_ghostPrograde.transform.localPosition, "_ghostPrograde"));
+            Utilities.DebugLog(LogLevel.Diagnostic, Utilities.BuildOutput(_ghostRetrograde.transform.localPosition, "_ghostRetrograde"));
+            Utilities.DebugLogFormatted(LogLevel.Diagnostic, "_ghostManeuver active: {0}", _ghostManeuver.activeSelf);
+            Utilities.DebugLogFormatted(LogLevel.Diagnostic, "_ghostPrograde active: {0}", _ghostPrograde.activeSelf);
+            Utilities.DebugLogFormatted(LogLevel.Diagnostic, "_ghostRetrograde active: {0}", _ghostRetrograde.activeSelf);
         }
 
         private void UpdateGhostingTarget()
@@ -554,6 +482,9 @@ namespace EnhancedNavBall
                 _antiManeuverNode.transform.localPosition = _calculationStore.ManeuverPlus;
                 _antiManeuverNode.SetActive(false);
             }
+
+            Utilities.DebugLog(LogLevel.Diagnostic, Utilities.BuildOutput(_antiManeuverNode.transform.localPosition, "_antiManeuverNode"));
+            Utilities.DebugLogFormatted(LogLevel.Diagnostic, "_antiManeuverNode active: {0}", _antiManeuverNode.activeSelf);
         }
 
         private void HideBehindVectors()
@@ -584,13 +515,16 @@ namespace EnhancedNavBall
             }
 
             o.SetActive(visable);
+            Utilities.DebugLogFormatted(LogLevel.Diagnostic, "{0} set active: {1}", o.name, visable);
         }
 
         private void UpdateRadialNormalVectors()
         {
-            if (_navBallProgradeMagnatude == 0f)
-                _navBallProgradeMagnatude = _navBallBehaviour.progradeVector.localPosition.magnitude;
 
+            if (_navBallProgradeMagnatude == 0f)
+                _navBallProgradeMagnatude = References.Instance.Navball.progradeVector.localPosition.magnitude;
+
+            Utilities.DebugLogFormatted(LogLevel.Diagnostic, "Magnatude: {0}", References.Instance.Navball.progradeVector.localPosition.magnitude);
 
             //switch (FlightUIController.speedDisplayMode)
             //{
@@ -613,6 +547,11 @@ namespace EnhancedNavBall
 
             _radialMinus.transform.localPosition = -_calculationStore.RadialPlus * _navBallProgradeMagnatude;
             _normalMinus.transform.localPosition = -_calculationStore.NormalPlus * _navBallProgradeMagnatude;
+
+            Utilities.DebugLog(LogLevel.Diagnostic, Utilities.BuildOutput(_radialPlus.transform.localPosition, "_radialPlus"));
+            Utilities.DebugLog(LogLevel.Diagnostic, Utilities.BuildOutput(_normalPlus.transform.localPosition, "_normalPlus"));
+            Utilities.DebugLog(LogLevel.Diagnostic, Utilities.BuildOutput(_radialMinus.transform.localPosition, "_radialMinus"));
+            Utilities.DebugLog(LogLevel.Diagnostic, Utilities.BuildOutput(_normalMinus.transform.localPosition, "_normalMinus"));
         }
 
         #endregion
