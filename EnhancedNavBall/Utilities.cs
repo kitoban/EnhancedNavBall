@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
 
 namespace EnhancedNavBall
 {
@@ -13,12 +14,19 @@ namespace EnhancedNavBall
     {
         static LogLevel loggingLevel = LogLevel.None;
 
-        public static void DebugLog(LogLevel logLevel, string log)
+        public static void DebugLogFormatted(LogLevel logLevel, string message, params object[] strParams)
         {
             if (logLevel <= loggingLevel)
             {
-                Debug.Log(log);
+                message = String.Format(message, strParams);
+                String strMessageLine = String.Format("{0},EnhancedNavball,{1}", DateTime.Now, message);
+                Debug.Log(strMessageLine);
             }
+        }
+
+        public static void DebugLog(LogLevel logLevel, string log)
+        {
+            DebugLogFormatted(logLevel, log, new object[0]);
         }
 
         public static GameObject CreateSimplePlane(
