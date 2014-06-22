@@ -50,7 +50,6 @@
     <Compile Include="Config\BasicResources.cs" />
     <Compile Include="CalculationStore.cs" />
     <Compile Include="Config\ConfigurationWindow.cs" />
-    <Compile Include="DebugUtilities.cs" />
     <Compile Include="References.cs" />
     <Compile Include="ScalingNavBall.cs" />
     <Compile Include="Constants.cs" />

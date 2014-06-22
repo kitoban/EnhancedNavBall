@@ -88,6 +88,11 @@ namespace EnhancedNavBall
 
         public void Awake()
         {
+            var leftBottom = References.Instance.ScreenSafeUi.leftAnchor.bottom.localPosition;
+            References.Instance.ScreenSafeUi.leftAnchor.bottom.localPosition = new Vector3(leftBottom.x, leftBottom.y, 0.3f);
+
+            //var rightBottom = References.Instance.ScreenSafeUi.rightAnchor.bottom.localPosition;
+            //References.Instance.ScreenSafeUi.rightAnchor.bottom.localPosition = new Vector3(rightBottom.x, rightBottom.y, 0.8f);
         }
 
         private void LoadFromSettings()

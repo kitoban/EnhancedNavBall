@@ -292,7 +292,7 @@ namespace EnhancedNavBall.Config
                 BasicResources.StyleButton,
                 GUILayout.ExpandWidth(false)))
             {
-                DebugUtilities.DebugCall();
+                Utilities.DebugCall();
                 //_settings.Save();
             }
 
