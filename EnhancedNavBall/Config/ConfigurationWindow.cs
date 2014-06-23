@@ -8,7 +8,7 @@ namespace EnhancedNavBall.Config
     {
         private Texture2D _iconTexture; //= new Texture2D(32, 32, TextureFormat.ARGB32, false);
         private static int _windowId = 0;
-        private readonly Rect _windowPos = new Rect(3, 36, 300, 45);
+        private Rect _windowPos = new Rect(3, 36, 300, 45);
         private readonly System.Random _rnd = new System.Random();
         private const int _windowWidth = 320;
         private const long _windowHeight = 130;
@@ -32,7 +32,7 @@ namespace EnhancedNavBall.Config
 
             _settings = navballSettings;
 
-            _screenRect = new Rect(
+            _windowPos = new Rect(
                 _windowPos.x + _windowPos.width,
                 _windowPos.y,
                 _windowWidth,
@@ -118,10 +118,10 @@ namespace EnhancedNavBall.Config
         {
             if (_settings.WindowVisibleByActiveScene)
             {
-                _screenRect = GUILayout.Window(
+                _windowPos = GUILayout.Window(
                     _windowId,
-                    _screenRect,
-                    FillAddWindow,
+                    _windowPos,
+                    FillWindow,
                     "Enhanced Navball Settings",
                     BasicResources.styleWindow);
             }
@@ -145,8 +145,10 @@ namespace EnhancedNavBall.Config
             _setupComplete = true;
         }
 
-        public void FillAddWindow(int windowID)
+        public void FillWindow(int windowID)
         {
+            GUI.DragWindow(new Rect(0, 0, 10000, 20));
+
             //Preferences
             GUILayout.Label("Plugin Preferences", BasicResources.StyleSectionHeading, GUILayout.ExpandWidth(true));
             GUILayout.BeginVertical(BasicResources.styleAddFieldAreas);
