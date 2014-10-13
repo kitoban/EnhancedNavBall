@@ -15,10 +15,10 @@ namespace EnhancedNavBall
         private bool _isInPostDrawQueue = false;
         private bool _shouldBeInPostDrawQueue = false;
 
-        private GameObject _normalPlus;
-        private GameObject _normalMinus;
-        private GameObject _radialMinus;
-        private GameObject _radialPlus;
+        //private GameObject _normalPlus;
+        //private GameObject _normalMinus;
+        //private GameObject _radialMinus;
+        //private GameObject _radialPlus;
         private GameObject _antiManeuverNode;
         private GameObject _ghostManeuver;
         private GameObject _ghostPrograde;
@@ -50,6 +50,11 @@ namespace EnhancedNavBall
 
         public void OnGUI()
         {
+
+            //var texture2D = FlightGlobals.Bodies[1].BiomeMap.Map;
+            //GUI.DrawTexture(new Rect(0, 0, Screen.height, Screen.width), texture2D);
+
+
             //Do the GUI Stuff - basically get the workers draw stuff into the postrendering queue
             //If the two flags are different are we going in or out of the queue
             if (_shouldBeInPostDrawQueue != _isInPostDrawQueue)
@@ -114,7 +119,7 @@ namespace EnhancedNavBall
 
             _calculationStore = new CalculationStore();
 
-            BuildEnhancedNavBall();
+            //BuildEnhancedNavBall();
             CreateManueverPlane();
             BuildGhostingLayer();
 
@@ -198,54 +203,6 @@ namespace EnhancedNavBall
                 References.Instance.VectorsPivotTransform);
         }
 
-        private void BuildEnhancedNavBall()
-        {
-            if (_normalPlus != null)
-                return;
-
-            Utilities.DebugLog(LogLevel.Minimal, "BuildEnhancedNavBall");
-
-            _normalPlus = Utilities.CreateSimplePlane(
-                "normalPlus",
-                ScaledVectorSize);
-
-            _normalMinus = Utilities.CreateSimplePlane(
-                "normalMinus",
-                ScaledVectorSize);
-
-            _radialPlus = Utilities.CreateSimplePlane(
-                "radialPlus",
-                ScaledVectorSize);
-
-            _radialMinus = Utilities.CreateSimplePlane(
-                "radialMinus",
-                ScaledVectorSize);
-
-            SetupObject(
-                _normalPlus,
-                new Vector2(0.0f, 0.0f),
-                _normalColour,
-                References.Instance.VectorsPivotTransform);
-
-            SetupObject(
-                _normalMinus,
-                new Vector2(_graphicOffset, 0.0f),
-                _normalColour,
-                References.Instance.VectorsPivotTransform);
-
-            SetupObject(
-                _radialPlus,
-                new Vector2(_graphicOffset, _graphicOffset),
-                _radialColour,
-                References.Instance.VectorsPivotTransform);
-
-            SetupObject(
-                _radialMinus,
-                new Vector2(0.0f, _graphicOffset),
-                _radialColour,
-                References.Instance.VectorsPivotTransform);
-        }
-
         private void SetupObject(
             GameObject planeObject,
             Vector2 textureOffset,
@@ -294,7 +251,11 @@ namespace EnhancedNavBall
             Quaternion gymbal = References.Instance.Navball.attitudeGymbal;
             _calculationStore.RunCalculations(vessel, gymbal);
 
-            UpdateRadialNormalVectors();
+            if (_navBallProgradeMagnatude == 0f)
+                _navBallProgradeMagnatude = References.Instance.Navball.progradeVector.localPosition.magnitude;
+
+            Utilities.DebugLogFormatted(LogLevel.Diagnostic, "Magnatude: {0}", References.Instance.Navball.progradeVector.localPosition.magnitude);
+
             CalculateManeuver();
             HideBehindVectors();
             UpdateGhostingVectors(vessel);
@@ -304,8 +265,10 @@ namespace EnhancedNavBall
         {
             if (_calculationStore.ManeuverPresent)
             {
-                if (_calculationStore.ManeuverApplied)
+                if (_calculationStore.ManeuverApplied && _navballSettings.ENBManeuver)
                 {
+                    References.Instance.ManueverIndicationarrow.SetActive(false);
+
                     _ghostManeuver.transform.localPosition = ProcessVectorForGhosting(_calculationStore.ManeuverPlus);
                     _ghostManeuver.SetActive(_calculationStore.ManeuverPlus.z <= _ghostingHideZ);
 
@@ -494,10 +457,10 @@ namespace EnhancedNavBall
 
         private void HideBehindVectors()
         {
-            TestVisibility(_radialPlus);
-            TestVisibility(_radialMinus);
-            TestVisibility(_normalPlus);
-            TestVisibility(_normalMinus);
+            TestVisibility(References.Instance.RadialInVector);
+            TestVisibility(References.Instance.RadialOutVector);
+            TestVisibility(References.Instance.NormalVector);
+            TestVisibility(References.Instance.AntiNormalVector);
         }
 
         private void TestVisibility(GameObject o)
@@ -514,49 +477,12 @@ namespace EnhancedNavBall
             }
             else
             {
-
                 visable = o.transform.localPosition.z > 0.0d
-                    && _calculationStore.ManeuverPresent == false;
+                    && (_calculationStore.ManeuverPresent == false || _navballSettings.RadialNormalDuringManeuver);
             }
 
             o.SetActive(visable);
             Utilities.DebugLogFormatted(LogLevel.Diagnostic, "{0} set active: {1}", o.name, visable);
-        }
-
-        private void UpdateRadialNormalVectors()
-        {
-
-            if (_navBallProgradeMagnatude == 0f)
-                _navBallProgradeMagnatude = References.Instance.Navball.progradeVector.localPosition.magnitude;
-
-            Utilities.DebugLogFormatted(LogLevel.Diagnostic, "Magnatude: {0}", References.Instance.Navball.progradeVector.localPosition.magnitude);
-
-            //switch (FlightUIController.speedDisplayMode)
-            //{
-            //    case FlightUIController.SpeedDisplayModes.Surface:
-            //    case FlightUIController.SpeedDisplayModes.Orbit:
-            //        gymbal = _navBallBehaviour.attitudeGymbal;
-            //        break;
-
-            //    case FlightUIController.SpeedDisplayModes.Target:
-            //        gymbal = _navBallBehaviour.relativeGymbal;
-            //        break;
-
-            //    default:
-            //        throw new ArgumentOutOfRangeException();
-            //}
-
-            // Apply to nav ball
-            _radialPlus.transform.localPosition = _calculationStore.RadialPlus * _navBallProgradeMagnatude;
-            _normalPlus.transform.localPosition = _calculationStore.NormalPlus * _navBallProgradeMagnatude;
-
-            _radialMinus.transform.localPosition = -_calculationStore.RadialPlus * _navBallProgradeMagnatude;
-            _normalMinus.transform.localPosition = -_calculationStore.NormalPlus * _navBallProgradeMagnatude;
-
-            Utilities.DebugLog(LogLevel.Diagnostic, Utilities.BuildOutput(_radialPlus.transform.localPosition, "_radialPlus"));
-            Utilities.DebugLog(LogLevel.Diagnostic, Utilities.BuildOutput(_normalPlus.transform.localPosition, "_normalPlus"));
-            Utilities.DebugLog(LogLevel.Diagnostic, Utilities.BuildOutput(_radialMinus.transform.localPosition, "_radialMinus"));
-            Utilities.DebugLog(LogLevel.Diagnostic, Utilities.BuildOutput(_normalMinus.transform.localPosition, "_normalMinus"));
         }
 
         #endregion

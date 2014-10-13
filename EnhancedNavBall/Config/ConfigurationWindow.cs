@@ -21,6 +21,7 @@ namespace EnhancedNavBall.Config
         private readonly float _navballLeftLimit;
         private readonly float _navballRightLimit;
 
+
         public ConfigurationWindow(
             NavballSettings navballSettings)
         {
@@ -37,6 +38,8 @@ namespace EnhancedNavBall.Config
                 _windowPos.y,
                 _windowWidth,
                 _windowHeight);
+
+            //BuildColourPickerTexture();
         }
 
         internal void BuildIcon()
@@ -155,6 +158,10 @@ namespace EnhancedNavBall.Config
 
             AddSlideToUi();
             AddScaleToUi();
+            AddManeuverToUi();
+            AddRadialNormalDuringManeuverUi();
+            //AddColourPickerToUi();
+
             //DebugInfo();
 
             //AddAdditionToUi();
@@ -162,8 +169,41 @@ namespace EnhancedNavBall.Config
             GUILayout.EndVertical();
 
         }
+        private void AddRadialNormalDuringManeuverUi()
+        {
+            GUILayout.BeginHorizontal();
+            GUILayout.Label(
+                "Radial/Normal vectors during Maneuver",
+                BasicResources.StyleSectionHeading,
+                GUILayout.ExpandWidth(true));
 
-        private void AddAdditionToUi()
+            _settings.RadialNormalDuringManeuver = GUILayout.Toggle(
+                _settings.RadialNormalDuringManeuver,
+                _settings.RadialNormalDuringManeuver ? "Disable" : "Enable",
+                BasicResources.StyleButton,
+                GUILayout.ExpandWidth(false));
+
+            GUILayout.EndHorizontal();
+        }
+
+        private void AddManeuverToUi()
+        {
+            GUILayout.BeginHorizontal();
+            GUILayout.Label(
+                "ENB Maneuver Pointer",
+                BasicResources.StyleSectionHeading,
+                GUILayout.ExpandWidth(true));
+
+            _settings.ENBManeuver = GUILayout.Toggle(
+                _settings.ENBManeuver,
+                _settings.ENBManeuver ? "Disable" : "Enable",
+                BasicResources.StyleButton,
+                GUILayout.ExpandWidth(false));
+
+            GUILayout.EndHorizontal();
+        }
+
+        private void AddGhostToUi()
         {
             GUILayout.Label(
                 "Ghost Position",

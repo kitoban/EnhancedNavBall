@@ -30,6 +30,12 @@ namespace EnhancedNavBall
             get { return _navball; } 
         }
 
+        private GameObject _manueverIndicationarrow;
+        public GameObject ManueverIndicationarrow
+        {
+            get { return _manueverIndicationarrow; }
+        }
+
         private Transform _vectorsPivotTransform;
         public Transform VectorsPivotTransform
         {
@@ -55,6 +61,31 @@ namespace EnhancedNavBall
         }
 
         private FlightUIController _flightUiController;
+
+        private GameObject _antiNormalVector;
+        public GameObject AntiNormalVector
+        {
+            get { return _antiNormalVector; }
+        }
+
+        private GameObject _normalVector;
+        public GameObject NormalVector
+        {
+            get { return _normalVector; }
+        }
+
+        private GameObject _radialInVector;
+        public GameObject RadialInVector
+        {
+            get { return _radialInVector; }
+        }
+
+        private GameObject _radialOutVector;
+        public GameObject RadialOutVector
+        {
+            get { return _radialOutVector; }
+        }
+
         public FlightUIController FlightUIController
         {
             get { return _flightUiController; }
@@ -69,12 +100,19 @@ namespace EnhancedNavBall
             _navball = navballGameObject.GetComponent<NavBall>();
             _navBallTexture = _navball.navBall.renderer.sharedMaterial;
             _vectorsPivotTransform = navballGameObject.transform.FindChild("vectorsPivot");
-            
+
+            _antiNormalVector = _navball.antiNormalVector.gameObject;
+            _normalVector = _navball.normalVector.gameObject;
+            _radialInVector = _navball.radialInVector.gameObject;
+            _radialOutVector = _navball.radialOutVector.gameObject;
+
             ManeuverGizmo maneuverGizmo = MapView.ManeuverNodePrefab.GetComponent<ManeuverGizmo>();
             _maneuverTexture = maneuverGizmo.handleNormal.flag.renderer.sharedMaterial;
 
             var maneuverVector = GameObject.Find("maneuverVector");
             _navBallBurnVector = maneuverVector.GetComponent<NavBallBurnVector>();
+
+            _manueverIndicationarrow = GameObject.Find("Indicationarrow");
         }
 
         public static void Destroy()

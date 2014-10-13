@@ -49,6 +49,7 @@
   <ItemGroup>
     <Compile Include="Config\BasicResources.cs" />
     <Compile Include="CalculationStore.cs" />
+    <Compile Include="Config\ColorHSV.cs" />
     <Compile Include="Config\ConfigurationWindow.cs" />
     <Compile Include="References.cs" />
     <Compile Include="ScalingNavBall.cs" />
@@ -62,7 +63,7 @@
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PostBuildEvent>copy "$(TargetPath)" "E:\Games\KSP23_dev\GameData\EnhancedNavBall\Plugins"</PostBuildEvent>
+    <PostBuildEvent>copy "$(TargetPath)" "E:\Games\KSP25\GameData\EnhancedNavBall\Plugins"</PostBuildEvent>
   </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
